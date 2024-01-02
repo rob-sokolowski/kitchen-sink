@@ -37,6 +37,11 @@ signIn =
     button Types.SubmitSignIn "Submit"
 
 
+signInWithGoogle : Element.Element Types.FrontendMsg
+signInWithGoogle =
+    button Types.SignInWithGoogle "Sign in with Google"
+
+
 signOut : Element.Element Types.FrontendMsg
 signOut =
     button Types.SubmitSignOut "Sign out"

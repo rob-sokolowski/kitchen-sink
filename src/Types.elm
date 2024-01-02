@@ -143,6 +143,7 @@ type FrontendMsg
     | SignIn
     | SetSignInState SignInState
     | SubmitSignIn
+    | SignInWithGoogle
     | SubmitSignOut
     | SubmitSignUp
     | InputRealname String
