@@ -14,6 +14,7 @@
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "TSFoster/elm-uuid": "4.2.0",
             "bburdette/toop": "1.2.0",
+            "chelovek0v/bbase64": "1.0.1",
             "danfishgold/base64-bytes": "1.1.0",
             "dillonkearns/elm-markdown": "7.0.1",
             "elm/browser": "1.0.2",
@@ -26,6 +27,7 @@
             "elm/random": "1.0.0",
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
+            "elm-community/dict-extra": "2.4.0",
             "elm-community/list-extra": "8.7.0",
             "ianmackenzie/elm-units": "2.9.0",
             "lamdera/codecs": "1.0.0",
@@ -42,7 +44,6 @@
             "elm/file": "1.0.5",
             "elm/regex": "1.0.0",
             "elm/virtual-dom": "1.0.3",
-            "elm-community/dict-extra": "2.4.0",
             "erlandsona/assoc-set": "1.1.2",
             "rtfeldman/elm-hex": "1.0.0",
             "skyqrose/assoc-list-extra": "1.0.0"

@@ -10,9 +10,11 @@ module Types exposing
     , SignInState(..)
     , ToBackend(..)
     , ToFrontend(..)
+    , UserId
     )
 
 import AssocList
+import Auth.Common
 import BiDict
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
@@ -183,6 +185,20 @@ type ToBackend
     | SignUpRequest String String String String -- realname, username, email, password
       -- EXAMPLES
     | GetWeatherData String
+      -- Auth
+    | Auth_ToBackend Auth.Common.ToBackend
+
+
+
+-- TODO: Where should this UserId def live?
+
+
+type alias UserId =
+    String
+
+
+
+-- Or is it an int???
 
 
 type BackendMsg
@@ -199,6 +215,9 @@ type BackendMsg
     | ErrorEmailSent (Result Http.Error PostmarkSendResponse)
       -- EXAMPLES
     | GotWeatherData ClientId (Result Http.Error Weather.WeatherData)
+      -- Auth
+    | Auth_BackendMsg Auth.Common.BackendMsg
+    | Auth_RenewSession UserId SessionId ClientId Time.Posix
 
 
 type alias InitData2 =
@@ -212,6 +231,8 @@ type ToFrontend
     | GotMessage String
     | SubmitFormResponse (Result String (Id StripeSessionId))
     | AdminInspectResponse BackendModel
+      -- Auth
+    | Auth_ToFrontend Auth.Common.ToFrontend
       -- USER
     | UserSignedIn (Maybe User.User)
       -- EXAMPLE

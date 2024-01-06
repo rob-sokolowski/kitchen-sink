@@ -343,7 +343,14 @@ update msg model =
 
         ErrorEmailSent _ ->
             ( model, Cmd.none )
+
+        Auth_BackendMsg backendMsg ->
+            ( model, Cmd.none )
+
+        Auth_RenewSession userId sessionId clientId posix ->
+            ( model, Cmd.none )
     )
+        -- TODO: What is this????
         |> (\( newModel, cmd ) ->
                 ( newModel, Cmd.batch [ cmd ] )
            )
@@ -486,3 +493,6 @@ updateFromFrontend sessionId clientId msg model =
         -- EXAMPLES
         GetWeatherData city ->
             ( model, BackendHelper.getNewWeatherByCity clientId city )
+
+        Auth_ToBackend toBackend ->
+            ( model, Cmd.none )
