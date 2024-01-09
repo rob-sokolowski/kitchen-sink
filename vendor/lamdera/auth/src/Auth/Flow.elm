@@ -310,9 +310,11 @@ methodLoader methods methodId =
             )
 
 
-findMethod :
-    Auth.Common.MethodId
-    -> Auth.Common.Config frontendMsg toBackend backendMsg toFrontend frontendModel backendModel
-    -> Maybe (Auth.Common.Method frontendMsg backendMsg frontendModel backendModel)
-findMethod methodId config =
-    methodLoader config.methods methodId
+
+-- TODO: What is this being used for? I'm getting an error that I'm not sure is compatable with kitchen-sink!
+--findMethod :
+--    Auth.Common.MethodId
+--    -> Auth.Common.Config frontendMsg toBackend backendMsg toFrontend frontendModel backendModel
+--    -> Maybe (Auth.Common.Method frontendMsg backendMsg frontendModel backendModel)
+--findMethod methodId config =
+--    methodLoader config.methods methodId

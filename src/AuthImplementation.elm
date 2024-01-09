@@ -1,29 +1,9 @@
 module AuthImplementation exposing (..)
 
-<<<<<<< HEAD
-=======
--- TODO: IS there a config???
---import Config
-
->>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
 import Auth.Common
 import Auth.Flow
 import Auth.Method.OAuthGithub
 import Auth.Method.OAuthGoogle
-<<<<<<< HEAD
-import Config
-import Dict
-import Env
-
-import Lamdera
-import Pages.Login.Provider_.Callback
-import RemoteData exposing (RemoteData(..))
-import Secrets
-import Task
-import Time
-import Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToFrontend(..))
-import User exposing (Session(..), User)
-=======
 import Dict
 import Dict.Extra as Dict
 import Env
@@ -31,15 +11,12 @@ import Lamdera
 import Task
 import Time
 import Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..), UserId)
-import User exposing (User)
->>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend FrontendModel BackendModel
 config =
-
     { toBackend = Auth_ToBackend
-    , toFrontend = Auth_BackendMsg
+    , toFrontend = Auth_ToFrontend
     , backendMsg = Auth_BackendMsg
     , sendToFrontend = Lamdera.sendToFrontend
     , sendToBackend = Lamdera.sendToBackend
@@ -47,28 +24,46 @@ config =
         [ Auth.Method.OAuthGoogle.configuration googleOAuthClientId googleOAuthClientSecret
 
         --, Auth.Method.OAuthGithub.configuration Secrets.githubOAuthClientId Secrets.githubOAuthClientSecret
-
         ]
     , renewSession = renewSession
-    , logout = logout
+
+    -- TODO: Why do I need to comment out this logout? Relic of old implementation? Where did it go?
+    --, logout = logout
     }
 
 
-backendConfig model =
+backendConfig :
+    BackendModel
+    ->
+        { asToFrontend : Auth.Common.ToFrontend -> ToFrontend
+        , asBackendMsg : Auth.Common.BackendMsg -> BackendMsg
+        , sendToFrontend : Lamdera.ClientId -> toFrontend -> Cmd backendMsg
+        , backendModel : BackendModel
+        , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg FrontendModel BackendModel)
+        , handleAuthSuccess : Lamdera.SessionId -> Lamdera.ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
+        , isDev : Bool
+        , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
 
+        --, logout : comparable -> b -> { a | sessions : Dict.Dict comparable v } -> ( { a | sessions : Dict.Dict comparable v }, Cmd msg )
+        }
+backendConfig backendModel =
     { asToFrontend = Auth_ToFrontend
     , asBackendMsg = Auth_BackendMsg
-
     , sendToFrontend = Lamdera.sendToFrontend
-    , backendModel = model
+    , backendModel = backendModel
     , loadMethod = Auth.Flow.methodLoader config.methods
-    , handleAuthSuccess = handleAuthSuccess model
+    , handleAuthSuccess = handleAuthSuccess backendModel
     , isDev = Env.mode == Env.Development
     , renewSession = renewSession
-    , logout = logout
+
+    --, logout = logout
     }
 
 
+updateFromBackend :
+    Auth.Common.ToFrontend
+    -> { frontendModel | authFlow : Auth.Common.Flow }
+    -> ( { a | authFlow : Auth.Common.Flow }, Cmd msg )
 updateFromBackend authToFrontendMsg model =
     case authToFrontendMsg of
         Auth.Common.AuthInitiateSignin url ->
@@ -93,15 +88,9 @@ handleAuthSuccess :
     -> ( BackendModel, Cmd BackendMsg )
 handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
     let
-<<<<<<< HEAD
-        renewSession_ : User.UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
-        renewSession_ email sid cid =
-            Task.perform (RenewSession email sid cid) Time.now
-=======
         renewSession_ : UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
         renewSession_ email sid cid =
             Task.perform (Auth_RenewSession email sid cid) Time.now
->>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
     in
     if backendModel.users |> Dict.any (\k u -> u.email == userInfo.email) then
         let
@@ -166,8 +155,6 @@ getSessionUser sid model =
                     UserSession _ uid _ ->
                         Dict.get uid model.users
             )
-<<<<<<< HEAD
-=======
 
 
 
@@ -204,4 +191,3 @@ googleOAuthClientSecret =
 -- TODO: GitHub Example???
 --       Jim specified Google, but I think we should provide GitHub as well!
 -- end region: auth secrests config
->>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2

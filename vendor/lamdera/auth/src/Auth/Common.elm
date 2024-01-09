@@ -21,7 +21,7 @@ type alias Config frontendMsg toBackend backendMsg toFrontend frontendModel back
     , backendMsg : BackendMsg -> backendMsg
     , sendToFrontend : SessionId -> toFrontend -> Cmd backendMsg
     , sendToBackend : toBackend -> Cmd frontendMsg
-    , methods : List (Method frontendMsg backendMsg frontendModel backendModel)
+    , methods : List (Method frontendMsg backendMsg { frontendModel | authFlow : Flow, authRedirectBaseUrl : Url } backendModel)
     , renewSession : SessionId -> ClientId -> backendModel -> ( backendModel, Cmd backendMsg )
     }
 

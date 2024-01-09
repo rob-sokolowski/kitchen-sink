@@ -18,7 +18,7 @@ import Auth.Common
 import BiDict
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
-import Dict
+import Dict exposing (Dict)
 import Http
 import Id exposing (Id)
 import KeyValueStore
@@ -112,6 +112,8 @@ type alias BackendModel =
     -- USER
     , userDictionary : Dict.Dict String User.User
     , sessions : BiDict.BiDict SessionId String -- sessionId to username
+    , sessions2 : Dict SessionId UserId
+    , pendingAuths : Dict SessionId Auth.Common.PendingAuth
 
     --STRIPE
     , orders : AssocList.Dict (Id StripeSessionId) Stripe.Codec.Order

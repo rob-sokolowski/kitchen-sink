@@ -1,6 +1,8 @@
 module Backend exposing (app, init, subscriptions, update, updateFromFrontend)
 
 import AssocList
+import Auth.Flow
+import AuthImplementation
 import BackendHelper
 import BiDict
 import Dict
@@ -344,8 +346,8 @@ update msg model =
         ErrorEmailSent _ ->
             ( model, Cmd.none )
 
-        Auth_BackendMsg backendMsg ->
-            ( model, Cmd.none )
+        Auth_BackendMsg authMsg ->
+            Auth.Flow.backendUpdate (AuthImplementation.backendConfig model) authMsg
 
         Auth_RenewSession userId sessionId clientId posix ->
             ( model, Cmd.none )
