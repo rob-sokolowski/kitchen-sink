@@ -1,9 +1,16 @@
 module AuthImplementation exposing (..)
 
+<<<<<<< HEAD
+=======
+-- TODO: IS there a config???
+--import Config
+
+>>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
 import Auth.Common
 import Auth.Flow
 import Auth.Method.OAuthGithub
 import Auth.Method.OAuthGoogle
+<<<<<<< HEAD
 import Config
 import Dict
 import Env
@@ -16,18 +23,31 @@ import Task
 import Time
 import Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToFrontend(..))
 import User exposing (Session(..), User)
+=======
+import Dict
+import Dict.Extra as Dict
+import Env
+import Lamdera
+import Task
+import Time
+import Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..), UserId)
+import User exposing (User)
+>>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend FrontendModel BackendModel
 config =
-    { toBackend = AuthToBackend
-    , toFrontend = AuthToFrontend
-    , backendMsg = AuthBackendMsg
+
+    { toBackend = Auth_ToBackend
+    , toFrontend = Auth_BackendMsg
+    , backendMsg = Auth_BackendMsg
     , sendToFrontend = Lamdera.sendToFrontend
     , sendToBackend = Lamdera.sendToBackend
     , methods =
-        [ Auth.Method.OAuthGoogle.configuration Secrets.googleOAuthClientId Secrets.googleOAuthClientSecret
-        , Auth.Method.OAuthGithub.configuration Secrets.githubOAuthClientId Secrets.githubOAuthClientSecret
+        [ Auth.Method.OAuthGoogle.configuration googleOAuthClientId googleOAuthClientSecret
+
+        --, Auth.Method.OAuthGithub.configuration Secrets.githubOAuthClientId Secrets.githubOAuthClientSecret
+
         ]
     , renewSession = renewSession
     , logout = logout
@@ -35,8 +55,10 @@ config =
 
 
 backendConfig model =
-    { asToFrontend = AuthToFrontend
-    , asBackendMsg = AuthBackendMsg
+
+    { asToFrontend = Auth_ToFrontend
+    , asBackendMsg = Auth_BackendMsg
+
     , sendToFrontend = Lamdera.sendToFrontend
     , backendModel = model
     , loadMethod = Auth.Flow.methodLoader config.methods
@@ -71,9 +93,15 @@ handleAuthSuccess :
     -> ( BackendModel, Cmd BackendMsg )
 handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
     let
+<<<<<<< HEAD
         renewSession_ : User.UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
         renewSession_ email sid cid =
             Task.perform (RenewSession email sid cid) Time.now
+=======
+        renewSession_ : UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
+        renewSession_ email sid cid =
+            Task.perform (Auth_RenewSession email sid cid) Time.now
+>>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2
     in
     if backendModel.users |> Dict.any (\k u -> u.email == userInfo.email) then
         let
@@ -138,3 +166,42 @@ getSessionUser sid model =
                     UserSession _ uid _ ->
                         Dict.get uid model.users
             )
+<<<<<<< HEAD
+=======
+
+
+
+-- begin region: auth secrets config
+
+
+googleOAuthClientId : String
+googleOAuthClientId =
+    case Env.mode of
+        Env.Production ->
+            -- this secret is saved in Lamdera admin dashboard
+            -- TODO: GCP console!
+            "enjoy the holidays!"
+
+        _ ->
+            -- Safe to commit publicly, this is only for local dev
+            "happy new year!"
+
+
+googleOAuthClientSecret : String
+googleOAuthClientSecret =
+    case Env.mode of
+        Env.Production ->
+            -- this secret is saved in Lamdera admin dashboard
+            -- TODO: GCP console!
+            "happy hanukkah!"
+
+        _ ->
+            -- safe to commit publicly, this is only for local dev
+            "merry christmas!"
+
+
+
+-- TODO: GitHub Example???
+--       Jim specified Google, but I think we should provide GitHub as well!
+-- end region: auth secrests config
+>>>>>>> 76e3cf2a9aa6812ef8dd5d112fa5e6211eb3adb2

@@ -15,11 +15,17 @@ which has a number of useful built-in features. The notes
 below provide some information on how they work and how
 to use them.
 
+*I intend to improve and add to the notes as time permits.  If you have
+questions or suggestions, please let me know: jxxcarlson everywhere.*
+
 **Contents**
 
 - Admin page
 - Routing: Adding a new page
 - Ports: sending a message to JavaScript
+- Custom Elements
+- Outbound HTTP requests
+- RPC example
 - Stripe: Account and API
 - Stripe: Displaying Product Information to the User
 - Stripe: Submitting a Purchase
@@ -80,28 +86,179 @@ Element.link [] { url = Route.encode Notes, label = Element.text "Notes" }
 
 Another possibility is to add a link to `Pages.parts.header`:
 
-## Ports: sending a message to JavaScript
 
-The **Chirp** button you see on the home page plays a "chirp" sound
-when you click it. This is done by sending a message to JavaScript
-via ports.  Here are the places to look to see how this is done:
 
-- `elm-pkg-js/play-sound.js` is the JavaScript code that plays the sound.
 
-- In `elm-pkg-js-includes.js` there is mandatory code needed for ports to work in production.
 
-- In module `Ports`, one has the function `port playSound : Json.Encode.Value -> Cmd msg`
-  which sends data to Javascript world.
 
-- This function is called in `Frontend.update` when the message `Chirp` is received.
-  The handler for this message is
-  `Chirp -> ( model, Ports.playSound (Json.Encode.string "chirp.mp3") )`. Clicking
-  on the "Chirp" button sends the message `Chirp`.
+## Ports
 
-- There is a file `chirp.mp3` in the `public` directory.  This is the
-audio file that is played.
+The code for setting up communication between Elm and JavaScript
+is found in three places:
 
-Look in the `elm-pkg-js` directory and the module `Ports` for more examples.
+ - The directory `elm-pkg-js` with files. Javascript files in this directory
+ define functions that communicate with Elm.
+
+ - The module `Ports`. It houses counterparts of the functions in `elm-pkg-js`.
+
+ - The file `elm-pkg-js-includes.js`. It informs Lamdera of the existence of
+ of the files in `elm-pkg-js` and makes them available in production.
+
+
+**Example.**
+
+Consider the function
+
+
+
+ ```
+ module Ports exposing (..)
+
+ port playSound : Json.Encode.Value -> Cmd msg
+ ```
+
+It is paired with the function `app.ports.playSound` in
+ `elm-pkg-js/play-sound.js`.
+
+The **Chirp** button you see on the home page sends a message
+`Chirp` which is handled in `Frontend.update`:
+
+```elm
+Chirp -> ( model, Ports.playSound (Json.Encode.string "chirp.mp3") )
+```
+
+The command `Ports.playSound (Json.Encode.string "chirp.mp3")` communicates
+with its Javascript counterpart in  `elm-pkg-js/play-sound.js`:
+
+```javascript
+exports.init = async function init(app) {
+
+    app.ports.playSound.subscribe( function(filename) {
+        console.log("Playing sound", filename)
+        var audio = new Audio(filename);
+        audio.play();
+    })
+}
+```
+
+The result is that a "chirp" sound is played when the button is clicked.
+
+
+
+
+
+## Custom Elements
+
+Let's talk about the custom element `time-formatted` which you will find
+on the home (Kitchen sink) page. The code for this element is in
+`elm-pkg-js/time-formatted.js`.  It is paired with the Elm function
+
+```
+timeFormatted : List (Html.Attribute msg) -> List (Html.Html msg) -> Html.Html msg
+timeFormatted =
+    Html.node "time-formatted"
+```
+
+The `timeFormatted` function is called in `Pages.Home` via the code
+
+```
+Element.el [ Element.paddingXY 0 0 ]
+    (View.CustomElement.timeFormatted
+        [ Html.Attributes.attribute "id" "elem"
+        , Html.Attributes.attribute "hour" "numeric"
+        , Html.Attributes.attribute "minute" "numeric"
+        , Html.Attributes.attribute "second" "numeric"
+        , Html.Attributes.attribute "time-zone-name" "short"
+        ]
+        []
+        |> Element.html
+    )
+```
+
+Note that `time-formatted.js` is also referenced in
+`elm-pkg-js-includes.js` so that it will be available in production.
+
+[Documentation](https://javascript.info/custom-elements#example-time-formatted)
+
+**References**
+
+- [Elm Guide on Custom Elements](https://guide.elm-lang.org/interop/custom_elements.html)
+
+- [MDN Docs](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_custom_elements)
+
+- [reCAPTCHA](https://bigardone.dev/blog/2018/09/09/elm-and-web-components)
+
+- [Korban, a Straightforward Guide to Custom Elements](https://korban.net/posts/elm/2018-09-17-introduction-custom-elements-shadow-dom/)
+
+- [Luke Westby's talk on Custom Elements](https://www.youtube.com/watch?v=tyFe9Pw6TVE)
+
+## Outbound HTTP requests
+
+Recall that on the Home (Kitchen Sink) page there is an input field
+for names of cities.  If you type in a city name and hit `<return>`,
+the temperature in the named city is displayed.  This is done by
+issuing an an HTTP request to the [OpenWeatherMap API](https://openweathermap.org/).
+Supporting code for this request resides in the module `Weather`.
+
+The reason for issuing the request from the backend is that the
+API key is sensitive information.  If the request were issued
+from the frontend, the key would be visible to anyone
+running the app frontend.
+
+Here is the flow of information:
+
+1. The user types in a city name and hits `<return>`.  This
+   sends a message `RequestWeatherData model.inputCity` to the frontend update function.
+
+2. The frontend update function executes the command
+ `Lamdera.sendToBackend (GetWeatherData city)` at `RequestWeatherData`.
+
+3. The backend update function handles the message `GetWeatherData city`
+   by executing the command `BackendHelper.getNewWeatherByCity clientId city`.
+
+4. The function `Weather.getWeatherData` issues an HTTP request to `https://api.openweathermap.org`
+   with
+
+   `
+   expect = Http.expectJson (Types.GotWeatherData clientId) Weather.weatherDataDecoder
+   `
+5. The response is decoded by `Weather.weatherDataDecoder` at
+   `GotWeatherData clientId (Ok weatherData)` in the backend update function.
+   The command `Lamdera.sendToFrontend clientId (Types.ReceivedWeatherData result) )`
+   is executed.
+
+6. The frontend update function handles the message `ReceivedWeatherData result`. If
+the result is a successful one, we have in hand the weather data for the city.
+It is stored in the `weatherData` field of the frontend model. The view function
+extracts the city temperature from the weather data and displays it.
+
+## RPC example
+
+*Offer a service where key-value pairs can be stored and retrieved.*
+
+The backend model has a field `keyValueStore : Dict String String`.  The
+contents of the store are displayed in the Admin page.  New
+key-value pairs can be inserted via an RPC call to endpoint `putKeyValuePair`.
+See function `RPC.putKeyValuePair`.  To retrieve a value, use the
+endpoint `getKeyValuePair`.
+
+Here is an example of how the
+pair `Speed of light: 300,000 km/sec` was added the store:
+
+```
+   curl -X POST -d '{ "key": "Speed of light", "value": "300,000 km/sec" }' \\
+   -H 'content-type: application/json' localhost:8000/_r/putKeyValuePair
+```
+
+And here is how it is retrieved:
+
+```
+ curl -X POST -d '{ "key": "Speed of light" }' \\
+ -H 'content-type: application/json' localhost:8000/_r/getKeyValuePair
+ ```
+
+This could be a useful feature in production if the security
+issues it poses are addressed.
 
 
 ## Stripe: Account and API

@@ -1,4 +1,9 @@
-module Pages.Parts exposing (footer, generic, header)
+module Pages.Parts exposing
+    ( footer
+    , generic
+    , genericNoScrollBar
+    , header
+    )
 
 import Element exposing (Element)
 import Element.Background
@@ -8,6 +13,23 @@ import Route exposing (Route(..))
 import Theme
 import Types
 import View.Color
+
+
+genericNoScrollBar : Types.LoadedModel -> (Types.LoadedModel -> Element msg) -> Element msg
+genericNoScrollBar model view =
+    Element.column
+        [ Element.width Element.fill, Element.height Element.fill, Element.clip ]
+        [ header model model.route { window = model.window, isCompact = True }
+        , Element.column
+            (Element.padding 20
+                :: Element.height (Element.px <| model.window.height - 95)
+                :: Element.width (Element.px <| 500)
+                :: Theme.contentAttributes
+            )
+            [ view model
+            ]
+        , footer model.route model
+        ]
 
 
 generic : Types.LoadedModel -> (Types.LoadedModel -> Element msg) -> Element msg
@@ -36,7 +58,7 @@ header model route config =
         , Element.alignTop
         ]
         (Element.wrappedRow
-            ([ Element.spacing 32
+            ([ Element.spacing 24
              , Element.Background.color View.Color.blue
              , Element.Font.color (Element.rgb 1 1 1)
              ]
@@ -61,6 +83,12 @@ header model route config =
             , Element.link
                 (linkStyle route Purchase)
                 { url = Route.encode Purchase, label = Element.text "Purchase" }
+            , Element.link
+                (linkStyle route DataStore)
+                { url = Route.encode DataStore, label = Element.text "Raw Data" }
+            , Element.link
+                (linkStyle route EditData)
+                { url = Route.encode EditData, label = Element.text "Edit Data" }
             , Element.link
                 (linkStyle route SignInRoute)
                 { url = Route.encode SignInRoute

@@ -1,8 +1,11 @@
 module BackendHelper exposing
-    ( elmCampEmailAddress
-    , errorEmail
+    ( errorEmail
     , getAtmosphericRandomNumbers
+    , getNewWeatherByCity
+    , getValueWithKey
     , priceIdToProductId
+    , purchaseSupportAddres
+    , putKVPair
     , sessionIdToStripeSessionId
     , testUserDictionary
     )
@@ -13,6 +16,7 @@ import EmailAddress
 import Env
 import Http
 import Id
+import Json.Encode
 import Lamdera
 import List.Extra
 import List.Nonempty
@@ -24,6 +28,56 @@ import Time
 import Types
 import Unsafe
 import User
+import Weather
+
+
+
+-- DATA (JC)
+
+
+putKVPair : String -> String -> Cmd Types.FrontendMsg
+putKVPair key value =
+    Http.post
+        { url = Env.dataSource Env.mode ++ "/_r/putKeyValuePair"
+        , body = Http.jsonBody <| encodeKVPair key value
+        , expect = Http.expectWhatever Types.DataUploaded
+        }
+
+
+getValueWithKey : String -> Cmd Types.FrontendMsg
+getValueWithKey key =
+    Http.post
+        { url = Env.dataSource Env.mode ++ "/_r/getKeyValuePair"
+        , body = Http.jsonBody <| encodeKey key
+        , expect = Http.expectString Types.GotValue
+        }
+
+
+encodeKVPair : String -> String -> Json.Encode.Value
+encodeKVPair key value =
+    Json.Encode.object
+        [ ( "key", Json.Encode.string key )
+        , ( "value", Json.Encode.string value )
+        ]
+
+
+encodeKey : String -> Json.Encode.Value
+encodeKey key =
+    Json.Encode.object
+        [ ( "key", Json.Encode.string key )
+        ]
+
+
+
+-- OTHER
+
+
+getNewWeatherByCity : Lamdera.ClientId -> String -> Cmd Types.BackendMsg
+getNewWeatherByCity clientId city =
+    Http.get
+        { url = "https://api.openweathermap.org/data/2.5/weather?q=" ++ city ++ "&APPID=" ++ Env.weatherAPIKey
+        , expect = Http.expectJson (Types.GotWeatherData clientId) Weather.weatherDataDecoder
+        }
 
 
 testUserDictionary : Dict.Dict String User.User
@@ -37,6 +91,7 @@ testUserDictionary =
             , id = "661b76d8-eee8-42fb-a28d-cf8ada73f869"
             , created_at = Time.millisToPosix 1704237963000
             , updated_at = Time.millisToPosix 1704237963000
+            , role = User.AdminRole
             }
           )
         , ( "aristotle"
@@ -47,6 +102,7 @@ testUserDictionary =
             , id = "38952d62-9772-4e5d-a927-b8e41b6ef2ed"
             , created_at = Time.millisToPosix 1704237963000
             , updated_at = Time.millisToPosix 1704237963000
+            , role = User.UserRole
             }
           )
         ]
@@ -97,7 +153,7 @@ errorEmail errorMessage =
             Postmark.sendEmail
                 Types.ErrorEmailSent
                 Env.postmarkApiKey
-                { from = { name = "elm-camp", email = elmCampEmailAddress }
+                { from = { name = "elm-camp", email = purchaseSupportAddres }
                 , to = List.Nonempty.map (\email -> { name = "", email = email }) to
                 , subject =
                     String.Nonempty.NonemptyString 'E'
@@ -117,6 +173,6 @@ errorEmail errorMessage =
             Cmd.none
 
 
-elmCampEmailAddress : EmailAddress.EmailAddress
-elmCampEmailAddress =
+purchaseSupportAddres : EmailAddress.EmailAddress
+purchaseSupportAddres =
     Unsafe.emailAddress "team@elm.camp"

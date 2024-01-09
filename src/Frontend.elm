@@ -3,6 +3,7 @@ module Frontend exposing (app)
 --exposing (PriceId, ProductId(..), StripeSessionId)
 
 import AssocList
+import BackendHelper
 import Browser exposing (UrlRequest(..))
 import Browser.Dom
 import Browser.Events
@@ -11,6 +12,7 @@ import Dict
 import Env
 import Json.Decode
 import Json.Encode
+import KeyValueStore
 import Lamdera
 import Ports
 import Predicate
@@ -59,15 +61,6 @@ init url key =
     let
         route =
             Route.decode url
-
-        -- Use URL = localhost:8000/?organiser=true to see the admin view (??)
-        isOrganiser =
-            case url |> Url.Parser.parse (Url.Parser.top <?> queryBool "organiser") of
-                Just (Just isOrganiser_) ->
-                    isOrganiser_
-
-                _ ->
-                    False
     in
     ( Loading
         { key = key
@@ -75,7 +68,6 @@ init url key =
         , window = Nothing
         , initData = Nothing
         , route = route
-        , isOrganiser = isOrganiser
         }
     , Cmd.batch
         [ Browser.Dom.getViewport
@@ -140,9 +132,19 @@ tryLoading loadingModel =
 
                         --
                         , route = loadingModel.route
-                        , isOrganiser = loadingModel.isOrganiser
                         , backendModel = Nothing
                         , message = ""
+
+                        -- EXAMPLES
+                        , inputCity = ""
+                        , weatherData = Nothing
+
+                        -- DATA
+                        , keyValueStore = Dict.empty
+                        , inputKey = ""
+                        , inputValue = ""
+                        , inputFilterData = ""
+                        , kvViewType = KeyValueStore.KVVSummary
                         }
                     , Cmd.none
                     )
@@ -216,14 +218,19 @@ updateLoaded msg model =
             ( model, Lamdera.sendToBackend (SignInRequest model.username model.password) )
 
         SubmitSignOut ->
-            ( { model
-                | currentUser = Nothing
-                , signInState = SignedOut
-                , username = ""
-                , password = ""
-              }
-            , Cmd.none
-            )
+            case model.currentUser of
+                Just { username } ->
+                    ( { model
+                        | currentUser = Nothing
+                        , signInState = SignedOut
+                        , username = ""
+                        , password = ""
+                      }
+                    , Lamdera.sendToBackend (SignOutRequest username)
+                    )
+
+                Nothing ->
+                    ( model, Cmd.none )
 
         SubmitSignUp ->
             let
@@ -344,6 +351,54 @@ updateLoaded msg model =
         SetViewport ->
             ( model, Cmd.none )
 
+        -- EXAMPLES
+        RequestWeatherData city ->
+            ( model, Lamdera.sendToBackend (GetWeatherData city) )
+
+        InputCity str ->
+            ( { model | inputCity = str }, Cmd.none )
+
+        -- DATA
+        InputKey str ->
+            ( { model | inputKey = str }, Cmd.none )
+
+        InputValue str ->
+            ( { model | inputValue = str }, Cmd.none )
+
+        InputFilterData str ->
+            ( { model | inputFilterData = str }, Cmd.none )
+
+        AddKeyValuePair key value ->
+            ( model, BackendHelper.putKVPair key value )
+
+        GetValueWithKey key ->
+            ( model, BackendHelper.getValueWithKey key )
+
+        GotValue result ->
+            case result of
+                Ok str ->
+                    ( { model
+                        | inputValue =
+                            str
+                                |> String.dropLeft 1
+                                |> String.dropRight 1
+                                |> String.replace "\\n" "\n"
+                      }
+                    , Cmd.none
+                    )
+
+                Err _ ->
+                    ( { model | inputValue = "Oops!", message = "Error finding value for given key" }, Cmd.none )
+
+        SetKVViewType kvViewType ->
+            ( { model | kvViewType = kvViewType }, Cmd.none )
+
+        DataUploaded result ->
+            ( model, Cmd.none )
+
+        SignInWithGoogle ->
+            ( model, Cmd.none )
+
 
 scrollToTop : Cmd FrontendMsg
 scrollToTop =
@@ -423,3 +478,18 @@ updateFromBackendLoaded msg model =
                       else
                         Cmd.none
                     )
+
+        ReceivedWeatherData result ->
+            case result of
+                Ok weatherData ->
+                    ( { model | weatherData = Just weatherData }, Cmd.none )
+
+                Err _ ->
+                    ( { model | weatherData = Nothing, message = "Error getting weather data. reae" }, Cmd.none )
+
+        -- DATA
+        GotKeyValueStore keyValueStore ->
+            ( { model | keyValueStore = keyValueStore }, Cmd.none )
+
+        Auth_ToFrontend toFrontend ->
+            ( model, Cmd.none )

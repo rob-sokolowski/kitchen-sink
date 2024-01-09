@@ -1,4 +1,19 @@
-module Env exposing (..)
+module Env exposing
+    ( Mode(..)
+    , adminPassword
+    , dataSource
+    , developerEmails
+    , developerEmails_
+    , domain
+    , isProduction
+    , isProduction_
+    , mode
+    , postmarkApiKey
+    , postmarkApiKey_
+    , stripePrivateApiKey
+    , stripePublicApiKey
+    , weatherAPIKey
+    )
 
 import EmailAddress exposing (EmailAddress)
 import Postmark
@@ -7,6 +22,20 @@ import Postmark
 type Mode
     = Development
     | Production
+
+
+weatherAPIKey =
+    "xxx"
+
+
+dataSource : Mode -> String
+dataSource mode_ =
+    case mode_ of
+        Development ->
+            "http://localhost:8080"
+
+        Production ->
+            "https://elm-kitchen-sink.lamdera.app"
 
 
 domain =

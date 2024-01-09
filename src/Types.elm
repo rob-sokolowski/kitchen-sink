@@ -1,11 +1,27 @@
-module Types exposing (..)
+module Types exposing
+    ( AdminDisplay(..)
+    , BackendModel
+    , BackendMsg(..)
+    , FrontendModel(..)
+    , FrontendMsg(..)
+    , InitData2
+    , LoadedModel
+    , LoadingModel
+    , SignInState(..)
+    , ToBackend(..)
+    , ToFrontend(..)
+    , UserId
+    )
 
 import AssocList
+import Auth.Common
+import BiDict
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict
 import Http
 import Id exposing (Id)
+import KeyValueStore
 import Lamdera exposing (ClientId, SessionId)
 import LocalUUID
 import Postmark exposing (PostmarkSendResponse)
@@ -18,6 +34,7 @@ import Time
 import Untrusted exposing (Untrusted)
 import Url exposing (Url)
 import User
+import Weather
 
 
 type FrontendModel
@@ -30,7 +47,6 @@ type alias LoadingModel =
     , now : Time.Posix
     , window : Maybe { width : Int, height : Int }
     , route : Route
-    , isOrganiser : Bool
     , initData : Maybe InitData2
     }
 
@@ -62,8 +78,18 @@ type alias LoadedModel =
 
     --
     , route : Route
-    , isOrganiser : Bool
     , message : String
+
+    -- EXAMPLES
+    , weatherData : Maybe Weather.WeatherData
+    , inputCity : String
+
+    -- DATA (JC)
+    , keyValueStore : Dict.Dict String String
+    , inputKey : String
+    , inputValue : String
+    , inputFilterData : String
+    , kvViewType : KeyValueStore.KVViewType
     }
 
 
@@ -76,6 +102,7 @@ type SignInState
 type AdminDisplay
     = ADStripe
     | ADUser
+    | ADKeyValues
 
 
 type alias BackendModel =
@@ -84,6 +111,7 @@ type alias BackendModel =
 
     -- USER
     , userDictionary : Dict.Dict String User.User
+    , sessions : BiDict.BiDict SessionId String -- sessionId to username
 
     --STRIPE
     , orders : AssocList.Dict (Id StripeSessionId) Stripe.Codec.Order
@@ -92,6 +120,9 @@ type alias BackendModel =
     , prices : AssocList.Dict (Id ProductId) Stripe.Codec.Price2
     , time : Time.Posix
     , products : Stripe.Stripe.ProductInfoDict
+
+    -- EXPERIMENTAL
+    , keyValueStore : Dict.Dict String String
     }
 
 
@@ -126,9 +157,20 @@ type FrontendMsg
     | SetAdminDisplay AdminDisplay
       --
     | SetViewport
-      -- PORT EXAMPLES
+      -- EXAMPLES
     | CopyTextToClipboard String
     | Chirp
+    | RequestWeatherData String
+    | InputCity String
+      -- DATA (JC)
+    | InputKey String
+    | InputValue String
+    | InputFilterData String
+    | AddKeyValuePair String String
+    | GetValueWithKey String
+    | GotValue (Result Http.Error String)
+    | DataUploaded (Result Http.Error ())
+    | SetKVViewType KeyValueStore.KVViewType
 
 
 type ToBackend
@@ -139,7 +181,24 @@ type ToBackend
     | RenewPrices
       -- USER
     | SignInRequest String String
+    | SignOutRequest String
     | SignUpRequest String String String String -- realname, username, email, password
+      -- EXAMPLES
+    | GetWeatherData String
+      -- Auth
+    | Auth_ToBackend Auth.Common.ToBackend
+
+
+
+-- TODO: Where should this UserId def live?
+
+
+type alias UserId =
+    String
+
+
+
+-- Or is it an int???
 
 
 type BackendMsg
@@ -154,6 +213,11 @@ type BackendMsg
     | ExpiredStripeSession (Id StripeSessionId) (Result Http.Error ())
     | ConfirmationEmailSent (Id StripeSessionId) (Result Http.Error PostmarkSendResponse)
     | ErrorEmailSent (Result Http.Error PostmarkSendResponse)
+      -- EXAMPLES
+    | GotWeatherData ClientId (Result Http.Error Weather.WeatherData)
+      -- Auth
+    | Auth_BackendMsg Auth.Common.BackendMsg
+    | Auth_RenewSession UserId SessionId ClientId Time.Posix
 
 
 type alias InitData2 =
@@ -167,8 +231,14 @@ type ToFrontend
     | GotMessage String
     | SubmitFormResponse (Result String (Id StripeSessionId))
     | AdminInspectResponse BackendModel
+      -- Auth
+    | Auth_ToFrontend Auth.Common.ToFrontend
       -- USER
     | UserSignedIn (Maybe User.User)
+      -- EXAMPLE
+    | ReceivedWeatherData (Result Http.Error Weather.WeatherData)
+      -- DATA (JC)
+    | GotKeyValueStore (Dict.Dict String String)
 
 
 

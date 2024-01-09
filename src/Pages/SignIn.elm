@@ -1,4 +1,4 @@
-module Pages.SignIn exposing (..)
+module Pages.SignIn exposing (signIn, signUp, signedIn, topPadding, view)
 
 import Element exposing (Element)
 import Element.Font
@@ -6,6 +6,7 @@ import Types exposing (..)
 import View.Button
 import View.Color
 import View.Input
+import View.Utility
 
 
 view : LoadedModel -> Element FrontendMsg
@@ -31,10 +32,10 @@ signIn model =
             , Element.el [ Element.Font.size 14 ] (Element.text "There is ABSOLUTELY NO security here.")
             , Element.el [ Element.Font.size 14 ] (Element.text "This for initial testing only.")
             , Element.el [ Element.Font.size 14 ] (Element.text "From time to time the database will be reset and all will be lost.")
-            , Element.el [ Element.Font.size 14 ] (Element.text "PS: no validation yet.")
+            , Element.el [ Element.Font.size 14 ] (Element.text "PS: sign in as jxxcarlson with password 1234 to play administrator")
             ]
         , View.Input.template "User Name" model.username InputUsername
-        , View.Input.template "Password" model.password InputPassword
+        , View.Input.passwordTemplateWithAttr [ View.Utility.onEnter Types.SubmitSignIn ] "Password" model.password InputPassword
         , Element.row [ Element.spacing 18 ]
             [ View.Button.signIn
             , View.Button.setSignInState "Need an account?" SignUp
@@ -61,7 +62,6 @@ signUp model =
             , Element.el [ Element.Font.size 14 ] (Element.text "There is ABSOLUTELY NO security here.")
             , Element.el [ Element.Font.size 14 ] (Element.text "This for initial testing only.")
             , Element.el [ Element.Font.size 14 ] (Element.text "From time to time the database will be reset and all will be lost.")
-            , Element.el [ Element.Font.size 14 ] (Element.text "PS: no validation yet.")
             ]
         , View.Input.template "Real Name" model.realname InputRealname
         , View.Input.template "User Name" model.username InputUsername

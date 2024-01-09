@@ -1,9 +1,13 @@
 module View.Button exposing
-    ( askToRenewPrices
+    ( addKeyValuePair
+    , askToRenewPrices
     , buyProduct
     , copyTextToClipboard
+    , getValueWithKey
     , playSound
+    , requestWeatherData
     , setAdminDisplay
+    , setKVViewType
     , setSignInState
     , signIn
     , signOut
@@ -13,9 +17,11 @@ module View.Button exposing
 import Element
 import Element.Background
 import Element.Border as Border
+import Element.Events
 import Element.Font
 import Element.Input
 import Id exposing (Id)
+import KeyValueStore
 import Stripe.Product
 import Stripe.Stripe as Stripe
 import Types
@@ -65,7 +71,12 @@ highlight condition =
 
 
 
--- PORTS
+-- EXAMPLES
+
+
+requestWeatherData : String -> Element.Element Types.FrontendMsg
+requestWeatherData city =
+    button (Types.RequestWeatherData city) "Get Weather"
 
 
 copyTextToClipboard : String -> String -> Element.Element Types.FrontendMsg
@@ -85,6 +96,29 @@ playSound =
 buyProduct : Id Stripe.ProductId -> Id Stripe.PriceId -> Stripe.Product.Product_ -> Element.Element Types.FrontendMsg
 buyProduct productId priceId product =
     button (Types.BuyProduct productId priceId product) "Buy"
+
+
+
+-- DATA (JC)
+
+
+setKVViewType : KeyValueStore.KVViewType -> KeyValueStore.KVViewType -> String -> Element.Element Types.FrontendMsg
+setKVViewType currentViewType newViewType label =
+    highlightableButton (currentViewType == newViewType) (Types.SetKVViewType newViewType) label
+
+
+addKeyValuePair : String -> String -> Element.Element Types.FrontendMsg
+addKeyValuePair key value =
+    button (Types.AddKeyValuePair key value) "Save Key-Value Pair"
+
+
+getValueWithKey : String -> Element.Element Types.FrontendMsg
+getValueWithKey key =
+    button (Types.GetValueWithKey key) "Get Value with Key"
+
+
+
+--- STRIPE
 
 
 askToRenewPrices : Element.Element Types.FrontendMsg
@@ -121,6 +155,9 @@ buttonStyle =
     , Border.rounded 8
     , Element.Background.color View.Color.blue
     , Element.Font.color View.Color.white
+    , Element.mouseDown
+        [ Element.Background.color View.Color.buttonHighlight
+        ]
     ]
 
 

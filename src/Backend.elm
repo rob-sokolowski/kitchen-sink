@@ -1,23 +1,25 @@
-module Backend exposing (..)
+module Backend exposing (app, init, subscriptions, update, updateFromFrontend)
 
 import AssocList
 import BackendHelper
+import BiDict
 import Dict
 import Duration
 import Email
-import Env
 import HttpHelpers
 import Id exposing (Id)
 import Lamdera exposing (ClientId, SessionId)
 import LocalUUID
 import Predicate
 import Quantity
+import Set exposing (Set)
 import Stripe.PurchaseForm as PurchaseForm exposing (PurchaseFormValidated(..))
 import Stripe.Stripe as Stripe exposing (PriceId, ProductId(..), StripeSessionId)
 import Task
 import Time
 import Types exposing (..)
 import Untrusted
+import User
 
 
 app =
@@ -31,7 +33,8 @@ app =
 
 init : ( BackendModel, Cmd BackendMsg )
 init =
-    ( { userDictionary = BackendHelper.testUserDictionary |> Debug.log "@@USER_DICT (0, init)"
+    ( { userDictionary = BackendHelper.testUserDictionary
+      , sessions = BiDict.empty
 
       --STRIPE
       , orders = AssocList.empty
@@ -54,6 +57,9 @@ init =
                     }
                   )
                 ]
+
+      -- EXPERIMENTAL
+      , keyValueStore = Dict.fromList [ ( "foo", "1234" ), ( "bar", "5678" ), ( "hubble1929", hubble1929 ) ]
       }
     , Cmd.batch
         [ Time.now |> Task.perform GotTime
@@ -61,6 +67,38 @@ init =
         , BackendHelper.getAtmosphericRandomNumbers
         ]
     )
+
+
+hubble1929 =
+    """# Hubble's 1929 redshift-distance data
+# header: name,distance,red-shift
+# units: Mpc,km/s
+# ----------------------------------------
+S.Mag,0.032,170
+L.Mag,0.034,290
+NGC.6822,0.214,-130
+NGC.598,0.263,-70
+NGC.221,0.275,-185
+NGC.224,0.275,-220
+NGC.5457,0.45,200
+NGC.4736,0.5,290
+NGC.5194,0.5,270
+NGC.4449,0.63,200
+NGC.4214,0.8,300
+NGC.3031,0.9,-30
+NGC.3627,0.9,650
+NGC.4826,0.9,150
+NGC.5236,0.9,500
+NGC.1068,1.0,920
+NGC.5055,1.1,450
+NGC.7331,1.1,500
+NGC.4258,1.4,500
+NGC.4151,1.7,960
+NGC.4382,2.0,500
+NGC.4472,2.0,850
+NGC.4486,2.0,800
+NGC.4649,2.0,1090
+"""
 
 
 subscriptions : BackendModel -> Sub BackendMsg
@@ -73,10 +111,6 @@ subscriptions _ =
 
 update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
 update msg model =
-    let
-        _ =
-            Debug.log "@@2.3 USER DICT" model.userDictionary
-    in
     -- Replace existing randomAtmosphericNumber with a new one if possible
     (case msg of
         GotAtmosphericRandomNumbers tryRandomAtmosphericNumbers ->
@@ -104,13 +138,16 @@ update msg model =
                 , localUuidData = data_
                 , userDictionary =
                     if Dict.isEmpty model.userDictionary then
-                        BackendHelper.testUserDictionary |> Debug.log "@@USER_DICT (3.8, GotAtmosphericRandomNumbers)"
+                        BackendHelper.testUserDictionary
 
                     else
                         model.userDictionary
               }
             , Cmd.none
             )
+
+        GotWeatherData clientId result ->
+            ( model, Lamdera.sendToFrontend clientId (Types.ReceivedWeatherData result) )
 
         GotTime time ->
             let
@@ -137,13 +174,6 @@ update msg model =
             )
 
         GotPrices result ->
-            let
-                _ =
-                    Debug.log "@@GotPrices" result
-
-                _ =
-                    Debug.log "@@UserDict 1.55" model.userDictionary
-            in
             case result of
                 Ok prices ->
                     ( { model
@@ -166,10 +196,6 @@ update msg model =
                     ( model, BackendHelper.errorEmail ("GotPrices failed: " ++ HttpHelpers.httpErrorToString error) )
 
         GotPrices2 clientId result ->
-            let
-                _ =
-                    Debug.log "@@GotPrices2" result
-            in
             case result of
                 Ok prices ->
                     ( { model
@@ -197,10 +223,19 @@ update msg model =
                 Err error ->
                     ( model, BackendHelper.errorEmail ("GotPrices failed: " ++ HttpHelpers.httpErrorToString error) )
 
-        OnConnected _ clientId ->
+        OnConnected sessionId clientId ->
+            let
+                maybeUsername =
+                    BiDict.get sessionId model.sessions
+
+                maybeUser =
+                    Maybe.andThen (\username -> Dict.get username model.userDictionary) maybeUsername
+            in
             ( model
             , Cmd.batch
                 [ BackendHelper.getAtmosphericRandomNumbers
+                , Lamdera.sendToFrontend clientId (UserSignedIn maybeUser)
+                , Lamdera.sendToFrontend clientId (GotKeyValueStore model.keyValueStore)
                 , Lamdera.sendToFrontend
                     clientId
                     (InitData
@@ -308,7 +343,14 @@ update msg model =
 
         ErrorEmailSent _ ->
             ( model, Cmd.none )
+
+        Auth_BackendMsg backendMsg ->
+            ( model, Cmd.none )
+
+        Auth_RenewSession userId sessionId clientId posix ->
+            ( model, Cmd.none )
     )
+        -- TODO: What is this????
         |> (\( newModel, cmd ) ->
                 ( newModel, Cmd.batch [ cmd ] )
            )
@@ -360,17 +402,15 @@ updateFromFrontend sessionId clientId msg model =
         -- USER
         SignInRequest username password ->
             let
-                _ =
-                    Debug.log "@@USER DICT (1, SignInRequest)" model.userDictionary
-
                 maybeUser =
-                    Dict.get username model.userDictionary |> Debug.log "@@Maybe_USER"
+                    Dict.get username model.userDictionary
 
-                _ =
-                    Debug.log "@@(username, password)" ( username, password )
+                addSession : String -> BackendModel -> BackendModel
+                addSession username_ model_ =
+                    { model_ | sessions = BiDict.insert sessionId username_ model_.sessions }
             in
             if Just password == Maybe.map .password maybeUser then
-                ( model
+                ( model |> addSession username
                 , Cmd.batch
                     [ Lamdera.sendToFrontend clientId (GotMessage "Sign in successful!")
                     , Lamdera.sendToFrontend clientId (UserSignedIn maybeUser)
@@ -384,6 +424,26 @@ updateFromFrontend sessionId clientId msg model =
                     , Lamdera.sendToFrontend clientId (GotMessage "Username and password do not match. ")
                     ]
                 )
+
+        SignOutRequest username ->
+            let
+                activeSessions : List SessionId
+                activeSessions =
+                    BiDict.getReverse username model.sessions
+                        |> Set.toList
+
+                removeSessions : List SessionId -> BackendModel -> BackendModel
+                removeSessions activeSessions_ model_ =
+                    List.foldl
+                        (\sessionId_ model__ ->
+                            { model__ | sessions = BiDict.remove sessionId_ model__.sessions }
+                        )
+                        model_
+                        activeSessions_
+            in
+            ( model |> removeSessions activeSessions
+            , Lamdera.sendToFrontend clientId (UserSignedIn Nothing)
+            )
 
         SignUpRequest realname username email password ->
             case model.localUuidData of
@@ -401,11 +461,12 @@ updateFromFrontend sessionId clientId msg model =
                             , created_at = model.time
                             , updated_at = model.time
                             , id = LocalUUID.extractUUIDAsString uuidData
+                            , role = User.UserRole
                             }
                     in
                     ( { model
                         | localUuidData = model.localUuidData |> Maybe.map LocalUUID.step
-                        , userDictionary = Dict.insert username user model.userDictionary |> Debug.log "@@USER_DICT (2)"
+                        , userDictionary = Dict.insert username user model.userDictionary
                       }
                     , Lamdera.sendToFrontend clientId (UserSignedIn (Just user))
                     )
@@ -422,8 +483,16 @@ updateFromFrontend sessionId clientId msg model =
                     ( model, Cmd.none )
 
         AdminInspect maybeUser ->
-            if Predicate.isAdmin maybeUser then
-                ( model, Lamdera.sendToFrontend clientId (AdminInspectResponse model) )
+            --if Predicate.isAdmin maybeUser then
+            --    ( model, Lamdera.sendToFrontend clientId (AdminInspectResponse model) )
+            --
+            --else
+            --    ( model, Cmd.none )
+            ( model, Lamdera.sendToFrontend clientId (AdminInspectResponse model) )
 
-            else
-                ( model, Cmd.none )
+        -- EXAMPLES
+        GetWeatherData city ->
+            ( model, BackendHelper.getNewWeatherByCity clientId city )
+
+        Auth_ToBackend toBackend ->
+            ( model, Cmd.none )
