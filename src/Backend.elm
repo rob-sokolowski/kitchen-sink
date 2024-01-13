@@ -460,8 +460,8 @@ updateFromFrontend sessionId clientId msg model =
                             , username = username
                             , email = email
                             , password = password
-                            , created_at = model.time
-                            , updated_at = model.time
+                            , createdAt = model.time
+                            , updatedAt = model.time
                             , id = LocalUUID.extractUUIDAsString uuidData
                             , role = User.UserRole
                             }

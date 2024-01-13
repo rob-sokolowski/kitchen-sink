@@ -10,7 +10,17 @@ import Env
 import Lamdera
 import Task
 import Time
-import Types exposing (BackendModel, BackendMsg(..), FrontendModel, FrontendMsg(..), ToBackend(..), ToFrontend(..), UserId)
+import Types
+    exposing
+        ( BackendModel
+        , BackendMsg(..)
+        , FrontendModel
+        , FrontendMsg(..)
+        , ToBackend(..)
+        , ToFrontend(..)
+        )
+import User exposing (Role(..), Session(..), User, UserId)
+import Utils exposing (RemoteData(..))
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend FrontendModel BackendModel
@@ -92,21 +102,35 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
         renewSession_ email sid cid =
             Task.perform (Auth_RenewSession email sid cid) Time.now
     in
-    if backendModel.users |> Dict.any (\k u -> u.email == userInfo.email) then
+    if backendModel.userDictionary |> Dict.any (\k u -> u.email == userInfo.email) then
         let
             ( response, cmd ) =
-                backendModel.users
+                backendModel.userDictionary
                     |> Dict.find (\k u -> u.email == userInfo.email)
                     |> Maybe.map
                         (\( k, u ) ->
                             ( Success u, renewSession_ u.id sessionId clientId )
                         )
                     |> Maybe.withDefault ( Failure "email or password is invalid", Cmd.none )
+
+            -- TODO: Clean this up!!
+            response_ =
+                case response of
+                    Success user ->
+                        Just user
+
+                    _ ->
+                        Nothing
         in
         ( backendModel
         , Cmd.batch
-            [ Lamdera.sendToFrontend clientId (Deliver_AuthResult response)
-            , cmd
+            [ cmd
+            , case response_ of
+                Just user ->
+                    Lamdera.sendToFrontend clientId (Auth_ActiveSession user)
+
+                Nothing ->
+                    Cmd.none
             ]
         )
 
@@ -114,18 +138,24 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
         let
             user_ : User
             user_ =
-                { id = Dict.size backendModel.users
+                { id = Dict.size backendModel.userDictionary
+                , realname = ""
+                , username = ""
                 , email = userInfo.email
-                }
 
-            response : RemoteData e User
-            response =
-                Success user_
+                -- TODO: I don't think we'll want password, not sure what Jim's plans were here
+                , password = ""
+                , createdAt = Time.millisToPosix 1704237963000
+                , updatedAt = Time.millisToPosix 1704237963000
+                , role = UserRole
+                }
         in
-        ( { backendModel | users = backendModel.users |> Dict.insert user_.id user_ }
+        ( { backendModel
+            | userDictionary = backendModel.userDictionary |> Dict.insert user_.id user_
+          }
         , Cmd.batch
             [ renewSession_ user_.id sessionId clientId
-            , Lamdera.sendToFrontend clientId (Deliver_AuthResult response)
+            , Lamdera.sendToFrontend clientId (Auth_ActiveSession user_)
             ]
         )
 
@@ -134,12 +164,16 @@ renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMs
 renewSession sessionId clientId model =
     model
         |> getSessionUser sessionId
-        |> Maybe.map (\user -> ( model, Lamdera.sendToFrontend clientId (ActiveSession user) ))
+        |> Maybe.map (\user -> ( model, Lamdera.sendToFrontend clientId (Auth_ActiveSession user) ))
         |> Maybe.withDefault ( model, Cmd.none )
 
 
 logout sessionId clientId model =
     ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
+
+
+
+-- TODO: Where should User defs live??
 
 
 getSessionUser : Lamdera.SessionId -> BackendModel -> Maybe User
@@ -153,7 +187,7 @@ getSessionUser sid model =
                         Nothing
 
                     UserSession _ uid _ ->
-                        Dict.get uid model.users
+                        Dict.get uid model.userDictionary
             )
 
 

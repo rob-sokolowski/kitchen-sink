@@ -10,12 +10,10 @@ module Types exposing
     , SignInState(..)
     , ToBackend(..)
     , ToFrontend(..)
-    , UserId
     )
 
 import AssocList
 import Auth.Common
-import BiDict
 import Browser exposing (UrlRequest)
 import Browser.Navigation exposing (Key)
 import Dict exposing (Dict)
@@ -33,7 +31,7 @@ import Stripe.Stripe exposing (Price, PriceData, PriceId, ProductId, StripeSessi
 import Time
 import Untrusted exposing (Untrusted)
 import Url exposing (Url)
-import User
+import User exposing (Session, User, UserId)
 import Weather
 
 
@@ -93,6 +91,11 @@ type alias LoadedModel =
     }
 
 
+
+-- TODO: Where should this User type def live?
+-- TODO: Also, see Jim's User type in User.elm.. it's a bit more complete
+
+
 type SignInState
     = SignedOut
     | SignUp
@@ -110,9 +113,11 @@ type alias BackendModel =
     , localUuidData : Maybe LocalUUID.Data
 
     -- USER
-    , userDictionary : Dict.Dict String User.User
-    , sessions : BiDict.BiDict SessionId String -- sessionId to username
-    , sessions2 : Dict SessionId UserId
+    , userDictionary : Dict.Dict UserId User
+
+    -- TODO: Jim's placeholder had a BiDict, that might be a better fit that a standard Dict?
+    --       But I'm unsure if a key can be a record type???
+    , sessions : Dict SessionId Session -- sessionId to username
     , pendingAuths : Dict SessionId Auth.Common.PendingAuth
 
     --STRIPE
@@ -192,14 +197,6 @@ type ToBackend
 
 
 
--- TODO: Where should this UserId def live?
-
-
-type alias UserId =
-    String
-
-
-
 -- Or is it an int???
 
 
@@ -235,8 +232,9 @@ type ToFrontend
     | AdminInspectResponse BackendModel
       -- Auth
     | Auth_ToFrontend Auth.Common.ToFrontend
+    | Auth_ActiveSession User
       -- USER
-    | UserSignedIn (Maybe User.User)
+    | UserSignedIn (Maybe User)
       -- EXAMPLE
     | ReceivedWeatherData (Result Http.Error Weather.WeatherData)
       -- DATA (JC)

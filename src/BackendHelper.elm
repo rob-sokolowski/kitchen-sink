@@ -27,7 +27,7 @@ import Stripe.Stripe as Stripe exposing (PriceId, ProductId(..), StripeSessionId
 import Time
 import Types
 import Unsafe
-import User
+import User exposing (UserId)
 import Weather
 
 
@@ -80,28 +80,28 @@ getNewWeatherByCity clientId city =
         }
 
 
-testUserDictionary : Dict.Dict String User.User
+testUserDictionary : Dict.Dict UserId User.User
 testUserDictionary =
     Dict.fromList
-        [ ( "jxxcarlson"
+        [ ( 123
           , { realname = "Jim Carlson"
             , username = "jxxcarlson"
             , email = "jxxcarlson@gmail.com"
             , password = "1234"
-            , id = "661b76d8-eee8-42fb-a28d-cf8ada73f869"
-            , created_at = Time.millisToPosix 1704237963000
-            , updated_at = Time.millisToPosix 1704237963000
+            , id = 123
+            , createdAt = Time.millisToPosix 1704237963000
+            , updatedAt = Time.millisToPosix 1704237963000
             , role = User.AdminRole
             }
           )
-        , ( "aristotle"
+        , ( 456
           , { realname = "Aristotle"
             , username = "aristotle"
             , email = "aritotle@gmail.com"
             , password = "1234"
-            , id = "38952d62-9772-4e5d-a927-b8e41b6ef2ed"
-            , created_at = Time.millisToPosix 1704237963000
-            , updated_at = Time.millisToPosix 1704237963000
+            , id = 456
+            , createdAt = Time.millisToPosix 1704237963000
+            , updatedAt = Time.millisToPosix 1704237963000
             , role = User.UserRole
             }
           )
