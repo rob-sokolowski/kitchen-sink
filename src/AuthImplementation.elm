@@ -20,7 +20,6 @@ import Types
         , ToFrontend(..)
         )
 import User exposing (Role(..), Session(..), User, UserId)
-import Utils exposing (RemoteData(..))
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend FrontendModel BackendModel
@@ -42,20 +41,23 @@ config =
     }
 
 
-backendConfig :
-    BackendModel
-    ->
-        { asToFrontend : Auth.Common.ToFrontend -> ToFrontend
-        , asBackendMsg : Auth.Common.BackendMsg -> BackendMsg
-        , sendToFrontend : Lamdera.ClientId -> toFrontend -> Cmd backendMsg
-        , backendModel : BackendModel
-        , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg FrontendModel BackendModel)
-        , handleAuthSuccess : Lamdera.SessionId -> Lamdera.ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
-        , isDev : Bool
-        , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
 
-        --, logout : comparable -> b -> { a | sessions : Dict.Dict comparable v } -> ( { a | sessions : Dict.Dict comparable v }, Cmd msg )
-        }
+--backendConfig :
+--    BackendModel
+--    ->
+--        { asToFrontend : Auth.Common.ToFrontend -> ToFrontend
+--        , asBackendMsg : Auth.Common.BackendMsg -> BackendMsg
+--        , sendToFrontend : Lamdera.ClientId -> toFrontend -> Cmd backendMsg
+--        , backendModel : BackendModel
+--        , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg FrontendModel BackendModel)
+--        , handleAuthSuccess : Lamdera.SessionId -> Lamdera.ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
+--        , isDev : Bool
+--        , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
+--
+--        --, logout : comparable -> b -> { a | sessions : Dict.Dict comparable v } -> ( { a | sessions : Dict.Dict comparable v }, Cmd msg )
+--        }
+
+
 backendConfig backendModel =
     { asToFrontend = Auth_ToFrontend
     , asBackendMsg = Auth_BackendMsg
@@ -73,7 +75,7 @@ backendConfig backendModel =
 updateFromBackend :
     Auth.Common.ToFrontend
     -> { frontendModel | authFlow : Auth.Common.Flow }
-    -> ( { a | authFlow : Auth.Common.Flow }, Cmd msg )
+    -> ( { frontendModel | authFlow : Auth.Common.Flow }, Cmd msg )
 updateFromBackend authToFrontendMsg model =
     case authToFrontendMsg of
         Auth.Common.AuthInitiateSignin url ->
@@ -82,10 +84,15 @@ updateFromBackend authToFrontendMsg model =
         Auth.Common.AuthError err ->
             Auth.Flow.setError model err
 
-        Auth.Common.AuthSessionChallenge reason ->
-            -- TODO: I don't know what this is, but Mario's code had this todo statement, I'm putting a noop here in the meantime
-            --Debug.todo "Auth.Common.AuthSessionChallenge"
-            ( model, Cmd.none )
+
+
+--Auth.Common.AuthSessionChallenge reason ->
+--    -- TODO: I don't know what this is, but Mario's code had this todo statement, I'm putting a noop here in the meantime
+--    --Debug.todo "Auth.Common.AuthSessionChallenge"
+--    ( model, Cmd.none )
+--type Idk
+--    = Success UserId
+--    | Failure String
 
 
 handleAuthSuccess :
@@ -97,67 +104,73 @@ handleAuthSuccess :
     -> Time.Posix
     -> ( BackendModel, Cmd BackendMsg )
 handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
-    let
-        renewSession_ : UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
-        renewSession_ email sid cid =
-            Task.perform (Auth_RenewSession email sid cid) Time.now
-    in
-    if backendModel.userDictionary |> Dict.any (\k u -> u.email == userInfo.email) then
-        let
-            ( response, cmd ) =
-                backendModel.userDictionary
-                    |> Dict.find (\k u -> u.email == userInfo.email)
-                    |> Maybe.map
-                        (\( k, u ) ->
-                            ( Success u, renewSession_ u.id sessionId clientId )
-                        )
-                    |> Maybe.withDefault ( Failure "email or password is invalid", Cmd.none )
+    -- TODO: Very strange compiler bug??
+    -- noop for now, but this was the original function
+    ( backendModel, Cmd.none )
 
-            -- TODO: Clean this up!!
-            response_ =
-                case response of
-                    Success user ->
-                        Just user
 
-                    _ ->
-                        Nothing
-        in
-        ( backendModel
-        , Cmd.batch
-            [ cmd
-            , case response_ of
-                Just user ->
-                    Lamdera.sendToFrontend clientId (Auth_ActiveSession user)
 
-                Nothing ->
-                    Cmd.none
-            ]
-        )
-
-    else
-        let
-            user_ : User
-            user_ =
-                { id = Dict.size backendModel.userDictionary
-                , realname = ""
-                , username = ""
-                , email = userInfo.email
-
-                -- TODO: I don't think we'll want password, not sure what Jim's plans were here
-                , password = ""
-                , createdAt = Time.millisToPosix 1704237963000
-                , updatedAt = Time.millisToPosix 1704237963000
-                , role = UserRole
-                }
-        in
-        ( { backendModel
-            | userDictionary = backendModel.userDictionary |> Dict.insert user_.id user_
-          }
-        , Cmd.batch
-            [ renewSession_ user_.id sessionId clientId
-            , Lamdera.sendToFrontend clientId (Auth_ActiveSession user_)
-            ]
-        )
+--let
+--    renewSession_ : UserId -> Lamdera.SessionId -> Lamdera.ClientId -> Cmd BackendMsg
+--    renewSession_ email sid cid =
+--        Task.perform (Auth_RenewSession email sid cid) Time.now
+--in
+--if backendModel.userDictionary |> Dict.any (\k u -> u.email == userInfo.email) then
+--    let
+--        ( response, cmd ) =
+--            backendModel.userDictionary
+--                |> Dict.find (\k u -> u.email == userInfo.email)
+--                |> Maybe.map
+--                    (\( k, u ) ->
+--                        ( Success 123, renewSession_ u.id sessionId clientId )
+--                    )
+--                |> Maybe.withDefault ( Failure "email or password is invalid", Cmd.none )
+--
+--        -- TODO: Clean this up!!
+--        response_ =
+--            case response of
+--                Success user ->
+--                    Just user
+--
+--                _ ->
+--                    Nothing
+--    in
+--    ( backendModel
+--    , Cmd.batch
+--        [ cmd
+--        , case response_ of
+--            Just user ->
+--                Lamdera.sendToFrontend clientId (Auth_ActiveSession user)
+--
+--            Nothing ->
+--                Cmd.none
+--        ]
+--    )
+--
+--else
+--    let
+--        user_ : User
+--        user_ =
+--            { id = Dict.size backendModel.userDictionary
+--            , realname = ""
+--            , username = ""
+--            , email = userInfo.email
+--
+--            -- TODO: I don't think we'll want password, not sure what Jim's plans were here
+--            , password = ""
+--            , createdAt = Time.millisToPosix 1704237963000
+--            , updatedAt = Time.millisToPosix 1704237963000
+--            , role = UserRole
+--            }
+--    in
+--    ( { backendModel
+--        | userDictionary = backendModel.userDictionary |> Dict.insert user_.id user_
+--      }
+--    , Cmd.batch
+--        [ renewSession_ user_.id sessionId clientId
+--        , Lamdera.sendToFrontend clientId (Auth_ActiveSession user_)
+--        ]
+--    )
 
 
 renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )

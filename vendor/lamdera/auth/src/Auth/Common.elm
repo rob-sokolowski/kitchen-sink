@@ -111,7 +111,11 @@ type BackendMsg
 type ToFrontend
     = AuthInitiateSignin Url
     | AuthError Error
-    | AuthSessionChallenge AuthChallengeReason
+
+
+
+-- TODO: This was unused
+--| AuthSessionChallenge AuthChallengeReason
 
 
 type AuthChallengeReason
