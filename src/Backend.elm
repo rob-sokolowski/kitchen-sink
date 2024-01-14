@@ -121,6 +121,9 @@ update msg model =
         Auth_BackendMsg msg_ ->
             ( model, Cmd.none )
 
+        Auth_RenewSession email sessionId clientId nowish ->
+            ( model, Cmd.none )
+
         GotAtmosphericRandomNumbers tryRandomAtmosphericNumbers ->
             let
                 ( numbers, data_ ) =

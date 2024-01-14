@@ -211,6 +211,7 @@ type BackendMsg
     | GotWeatherData ClientId (Result Http.Error Weather.WeatherData)
       -- Auth
     | Auth_BackendMsg Auth.Common.BackendMsg
+    | Auth_RenewSession String SessionId ClientId Time.Posix
 
 
 type alias InitData2 =
