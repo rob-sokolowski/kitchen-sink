@@ -52,10 +52,19 @@ config =
     }
 
 
-
---backendConfig : BackendModel -> { asToFrontend : Auth.Common.ToFrontend -> ToFrontend, asBackendMsg : Auth.Common.BackendMsg -> BackendMsg, sendToFrontend : ClientId -> toFrontend -> Cmd backendMsg, backendModel : BackendModel, loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg LoadedModel BackendModel), handleAuthSuccess : SessionId -> ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg ), isDev : Bool, renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg ), logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg ) }
-
-
+backendConfig :
+    BackendModel
+    ->
+        { asToFrontend : Auth.Common.ToFrontend -> ToFrontend
+        , asBackendMsg : Auth.Common.BackendMsg -> BackendMsg
+        , sendToFrontend : ClientId -> ToFrontend -> Cmd backendMsg
+        , backendModel : BackendModel
+        , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg LoadedModel BackendModel)
+        , handleAuthSuccess : SessionId -> ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
+        , isDev : Bool
+        , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
+        , logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
+        }
 backendConfig model =
     { asToFrontend = Auth_ToFrontend
     , asBackendMsg = Auth_BackendMsg
@@ -71,6 +80,8 @@ backendConfig model =
 
 logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
 logout sessionId clientId model =
+    -- TODO: Actually implement logout, here's the old one
+    --    ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
     ( model, Cmd.none )
 
 
@@ -109,6 +120,8 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
         renewSession_ : String -> SessionId -> ClientId -> Cmd BackendMsg
         renewSession_ email sid cid =
             -- TODO: This "renewSession" name collides with the outer scope.. but they're doing different things..
+            -- it appears there's some intended hook for "renewSession", as it is a field in the Auth.BackendConfig record
+            -- so why do we mention it again here instead of using that config??
             Task.perform (Auth_RenewSession email sid cid) Time.now
 
         doesUserExist : Bool
@@ -152,13 +165,13 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
         )
 
     else
-        -- Here,  we've had a successful authentication for a user we don't have saved in our userDictionary
+        -- If we're here, we've had a successful authentication for a user we don't have saved in our userDictionary
         -- create new user record to both return to the frontend as well update our backendModel to include this new
         -- user record.
         let
             user_ : User
             user_ =
-                -- TODO: Default new user helper
+                -- TODO: Default new user helper function
                 { realname = "Jim Carlson"
                 , username = "jxxcarlson"
                 , email = "jxxcarlson@gmail.com"
@@ -166,7 +179,7 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
                 , id = "661b76d8-eee8-42fb-a28d-cf8ada73f869"
                 , created_at = Time.millisToPosix 1704237963000
                 , updated_at = Time.millisToPosix 1704237963000
-                , role = User.AdminRole
+                , role = User.UserRole
                 }
         in
         ( { backendModel | userDictionary = Dict.insert user_.id user_ backendModel.userDictionary }
@@ -183,15 +196,6 @@ renewSession sessionId clientId model =
         |> getSessionUser sessionId
         |> Maybe.map (\user -> ( model, Lamdera.sendToFrontend clientId (Auth_ActiveSession user) ))
         |> Maybe.withDefault ( model, Cmd.none )
-
-
-
---
--- TODO: Actually implement logout!
---logout sessionId clientId model =
---    ( { model | sessions = model.sessions |> Dict.remove sessionId }, Cmd.none )
---
---
 
 
 getSessionUser : Lamdera.SessionId -> BackendModel -> Maybe User

@@ -1,9 +1,8 @@
 module Frontend exposing (app)
 
---exposing (PriceId, ProductId(..), StripeSessionId)
-
 import AssocList
 import Auth.Common
+import Auth.Flow
 import BackendHelper
 import Browser exposing (UrlRequest(..))
 import Browser.Dom
@@ -27,7 +26,6 @@ import Time
 import Types exposing (..)
 import Untrusted
 import Url exposing (Url)
-import Url.Parser exposing ((</>), (<?>))
 import Url.Parser.Query as Query
 import View.Main
 
@@ -216,6 +214,11 @@ updateLoaded msg model =
             ( model, Ports.playSound (Json.Encode.string "chirp.mp3") )
 
         -- USER
+        Auth_GoogleOauthSignInRequested ->
+            -- Note: 'OAuthGoogle' is a special String value that will be parsed by the elm-spa route /login/:provider/callback
+            Auth.Flow.signInRequested "OAuthGoogle" model Nothing
+                |> Tuple.mapSecond (Auth_ToBackend >> Lamdera.sendToBackend)
+
         SetSignInState state ->
             ( { model
                 | signInState = state

@@ -159,6 +159,7 @@ type FrontendMsg
     | InputEmail String
     | InputPassword String
     | InputPasswordConfirmation String
+    | Auth_GoogleOauthSignInRequested
       -- ADMIN
     | SetAdminDisplay AdminDisplay
       --

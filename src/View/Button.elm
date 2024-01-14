@@ -10,6 +10,7 @@ module View.Button exposing
     , setKVViewType
     , setSignInState
     , signIn
+    , signInWithGoogle
     , signOut
     , signUp
     )
@@ -40,6 +41,11 @@ signIn =
 signOut : Element.Element Types.FrontendMsg
 signOut =
     button Types.SubmitSignOut "Sign out"
+
+
+signInWithGoogle : Element.Element Types.FrontendMsg
+signInWithGoogle =
+    button Types.Auth_GoogleOauthSignInRequested "Sign In with Google"
 
 
 signUp : Element.Element Types.FrontendMsg
