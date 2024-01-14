@@ -3,7 +3,6 @@ module AuthImplementation exposing (backendConfig, config)
 import Auth.Common
 import Auth.Flow
 import Auth.Method.OAuthGoogle
-import BackendHelper
 import Dict
 import Dict.Extra as Dict
 import Env
@@ -54,19 +53,7 @@ config =
 
 
 
---backendConfig :
---    BackendModel
---    ->
---        { asToFrontend : Auth.Common.ToFrontend -> ToFrontend
---        , asBackendMsg : Auth.Common.BackendMsg -> BackendMsg
---        , sendToFrontend : Lamdera.ClientId -> toFrontend -> Cmd backendMsg
---        , backendModel : BackendModel
---        , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg LoadedModel BackendModel)
---        , handleAuthSuccess : Lamdera.SessionId -> Lamdera.ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
---        , isDev : Bool
---        , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
---        , logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
---        }
+--backendConfig : BackendModel -> { asToFrontend : Auth.Common.ToFrontend -> ToFrontend, asBackendMsg : Auth.Common.BackendMsg -> BackendMsg, sendToFrontend : ClientId -> toFrontend -> Cmd backendMsg, backendModel : BackendModel, loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg LoadedModel BackendModel), handleAuthSuccess : SessionId -> ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg ), isDev : Bool, renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg ), logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg ) }
 
 
 backendConfig model =
@@ -121,6 +108,7 @@ handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
     let
         renewSession_ : String -> SessionId -> ClientId -> Cmd BackendMsg
         renewSession_ email sid cid =
+            -- TODO: This "renewSession" name collides with the outer scope.. but they're doing different things..
             Task.perform (Auth_RenewSession email sid cid) Time.now
 
         doesUserExist : Bool
