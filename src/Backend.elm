@@ -118,8 +118,8 @@ update : BackendMsg -> BackendModel -> ( BackendModel, Cmd BackendMsg )
 update msg model =
     -- Replace existing randomAtmosphericNumber with a new one if possible
     (case msg of
-        Auth_BackendMsg msg_ ->
-            ( model, Cmd.none )
+        Auth_BackendMsg authMsg ->
+            Auth.Flow.backendUpdate (AuthImplementation.backendConfig model) authMsg
 
         Auth_RenewSession email sessionId clientId nowish ->
             ( model, Cmd.none )

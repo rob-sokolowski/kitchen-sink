@@ -1,6 +1,6 @@
-module AuthImplementation exposing (backendConfig, config)
+module AuthImplementation exposing (backendConfig, config, updateFromBackend)
 
-import Auth.Common
+import Auth.Common exposing (MethodId)
 import Auth.Flow
 import Auth.Method.OAuthGoogle
 import Dict
@@ -23,12 +23,13 @@ import User exposing (User)
 
 googleOAuthClientId : String
 googleOAuthClientId =
-    "google-oauth-client-id"
+    "740743074280-dnv5r7rai8plqsfgg2sj0em2cg4q2rvd.apps.googleusercontent.com"
 
 
 googleOAuthClientSecret : String
 googleOAuthClientSecret =
-    "googleOAuthClientSecret"
+    -- TODO: For local dev this should be safe to commit... confirm this??
+    "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"
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend LoadedModel BackendModel
@@ -60,7 +61,7 @@ backendConfig :
         , sendToFrontend : ClientId -> ToFrontend -> Cmd backendMsg
         , backendModel : BackendModel
         , loadMethod : Auth.Common.MethodId -> Maybe (Auth.Common.Method FrontendMsg BackendMsg LoadedModel BackendModel)
-        , handleAuthSuccess : SessionId -> ClientId -> Auth.Common.UserInfo -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
+        , handleAuthSuccess : SessionId -> ClientId -> Auth.Common.UserInfo -> MethodId -> Maybe Auth.Common.Token -> Time.Posix -> ( BackendModel, Cmd BackendMsg )
         , isDev : Bool
         , renewSession : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
         , logout : String -> String -> BackendModel -> ( BackendModel, Cmd BackendMsg )
@@ -85,25 +86,22 @@ logout sessionId clientId model =
     ( model, Cmd.none )
 
 
+updateFromBackend :
+    Auth.Common.ToFrontend
+    -> LoadedModel
+    -> ( LoadedModel, Cmd msg )
+updateFromBackend authToFrontendMsg model =
+    case authToFrontendMsg of
+        Auth.Common.AuthInitiateSignin url ->
+            Auth.Flow.startProviderSignin url model
 
---updateFromBackend :
---    Auth.Common.ToFrontend
---    -> FrontendModel_Loaded
---    -> ( FrontendModel_Loaded, Cmd msg )
---updateFromBackend authToFrontendMsg model =
---    case authToFrontendMsg of
---        Auth.Common.AuthInitiateSignin url ->
---            Auth.Flow.startProviderSignin url model
---
---        Auth.Common.AuthError err ->
---            Auth.Flow.setError model err
---
---        Auth.Common.AuthSessionChallenge reason ->
---            -- TODO: I don't know what this is, but Mario's code had this todo statement, I'm putting a noop here in the meantime
---            --Debug.todo "Auth.Common.AuthSessionChallenge"
---            ( model, Cmd.none )
---
---
+        Auth.Common.AuthError err ->
+            Auth.Flow.setError model err
+
+        Auth.Common.AuthSessionChallenge reason ->
+            -- TODO: I don't know what this is, but Mario's code had this todo statement, I'm putting a noop here in the meantime
+            --Debug.todo "Auth.Common.AuthSessionChallenge"
+            ( model, Cmd.none )
 
 
 handleAuthSuccess :
@@ -111,11 +109,12 @@ handleAuthSuccess :
     -> Lamdera.SessionId
     -> Lamdera.ClientId
     -> Auth.Common.UserInfo
+    -> MethodId
     -> Maybe Auth.Common.Token
     -> Time.Posix
     -> ( BackendModel, Cmd BackendMsg )
-handleAuthSuccess backendModel sessionId clientId userInfo authToken now =
-    -- TODO: How is it that authToken is not used?.. something smells fishy here..
+handleAuthSuccess backendModel sessionId clientId userInfo methodId authToken now =
+    -- TODO: It seems odd to me that I'm not using methodId, authToken, nor now..
     let
         renewSession_ : String -> SessionId -> ClientId -> Cmd BackendMsg
         renewSession_ email sid cid =

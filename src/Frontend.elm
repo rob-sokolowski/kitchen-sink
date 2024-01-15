@@ -3,6 +3,7 @@ module Frontend exposing (app)
 import AssocList
 import Auth.Common
 import Auth.Flow
+import AuthImplementation
 import BackendHelper
 import Browser exposing (UrlRequest(..))
 import Browser.Dom
@@ -99,10 +100,10 @@ update msg model =
 dummyAuthUrl : Url
 dummyAuthUrl =
     -- TODO: real value based on env var?
-    { protocol = Url.Https
-    , host = "https://localhost"
+    { protocol = Url.Http
+    , host = "localhost"
     , port_ = Just 8080
-    , path = "/path"
+    , path = "/login/OAuthGoogle/callback"
     , query = Nothing
     , fragment = Nothing
     }
@@ -444,8 +445,8 @@ updateFromBackendLoaded msg model =
         Auth_ActiveSession user ->
             ( model, Cmd.none )
 
-        Auth_ToFrontend msg_ ->
-            ( model, Cmd.none )
+        Auth_ToFrontend authToFrontendMsg ->
+            AuthImplementation.updateFromBackend authToFrontendMsg model
 
         InitData { prices, productInfo } ->
             ( { model | prices = prices, productInfoDict = productInfo }, Cmd.none )

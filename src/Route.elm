@@ -15,6 +15,7 @@ type Route
     | Features
     | Notes
     | SignInRoute
+    | GoogleOAuthRedirect
     | Brillig
     | AdminRoute
     | Purchase
@@ -33,6 +34,7 @@ decode url =
         , Url.Parser.s "notes" |> Url.Parser.map Notes
         , Url.Parser.s "purchase" |> Url.Parser.map Purchase
         , Url.Parser.s "signin" |> Url.Parser.map SignInRoute
+        , Url.Parser.s "google-oauth-redirect" |> Url.Parser.map GoogleOAuthRedirect
         , Url.Parser.s "brillig" |> Url.Parser.map Brillig
         , Url.Parser.s Stripe.successPath <?> parseEmail |> Url.Parser.map PaymentSuccessRoute
         , Url.Parser.s Stripe.cancelPath |> Url.Parser.map PaymentCancelRoute
@@ -74,6 +76,9 @@ encode route =
             SignInRoute ->
                 [ "signin" ]
 
+            GoogleOAuthRedirect ->
+                [ "google-oauth-redirect" ]
+
             Brillig ->
                 [ "brillig" ]
 
@@ -106,6 +111,9 @@ encode route =
                 []
 
             SignInRoute ->
+                []
+
+            GoogleOAuthRedirect ->
                 []
 
             Brillig ->

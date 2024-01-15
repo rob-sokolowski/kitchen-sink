@@ -40,8 +40,6 @@ configuration clientId clientSecret =
         , getUserInfo = getUserInfo
         , onFrontendCallbackInit = Auth.Protocol.OAuth.onFrontendCallbackInit
         , placeholder = \x -> ()
-
-        -- , onAuthCallbackReceived = Debug.todo "onAuthCallbackReceived"
         }
 
 
