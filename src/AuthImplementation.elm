@@ -23,13 +23,13 @@ import User exposing (User)
 
 googleOAuthClientId : String
 googleOAuthClientId =
-    "740743074280-dnv5r7rai8plqsfgg2sj0em2cg4q2rvd.apps.googleusercontent.com"
+    "740743074280-bi5rd032a9vt48e13nj36pnt3hd8j8cv.apps.googleusercontent.com"
 
 
 googleOAuthClientSecret : String
 googleOAuthClientSecret =
     -- TODO: For local dev this should be safe to commit... confirm this??
-    "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"
+    "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"
 
 
 config : Auth.Common.Config FrontendMsg ToBackend BackendMsg ToFrontend LoadedModel BackendModel

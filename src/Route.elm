@@ -77,7 +77,7 @@ encode route =
                 [ "signin" ]
 
             GoogleOAuthRedirect ->
-                [ "google-oauth-redirect" ]
+                [ "login", " OAuthGoogle", "callback" ]
 
             Brillig ->
                 [ "brillig" ]
