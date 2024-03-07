@@ -39,6 +39,7 @@ signIn model =
         , Element.row [ Element.spacing 18 ]
             [ View.Button.signIn
             , View.Button.setSignInState "Need an account?" SignUp
+            , View.Button.signInWithGoogle
             ]
         , Element.el [] (Element.text model.message)
         ]

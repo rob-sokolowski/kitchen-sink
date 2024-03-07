@@ -1,8 +1,9 @@
 module Frontend exposing (app)
 
---exposing (PriceId, ProductId(..), StripeSessionId)
-
 import AssocList
+import Auth.Common
+import Auth.Flow
+import AuthImplementation
 import BackendHelper
 import Browser exposing (UrlRequest(..))
 import Browser.Dom
@@ -25,8 +26,7 @@ import Task
 import Time
 import Types exposing (..)
 import Untrusted
-import Url
-import Url.Parser exposing ((</>), (<?>))
+import Url exposing (Url)
 import Url.Parser.Query as Query
 import View.Main
 
@@ -97,6 +97,18 @@ update msg model =
             updateLoaded msg loaded |> Tuple.mapFirst Loaded
 
 
+dummyAuthUrl : Url
+dummyAuthUrl =
+    -- TODO: real value based on env var?
+    { protocol = Url.Http
+    , host = "localhost"
+    , port_ = Just 8080
+    , path = "/login/OAuthGoogle/callback"
+    , query = Nothing
+    , fragment = Nothing
+    }
+
+
 tryLoading : LoadingModel -> ( FrontendModel, Cmd FrontendMsg )
 tryLoading loadingModel =
     Maybe.map2
@@ -145,6 +157,10 @@ tryLoading loadingModel =
                         , inputValue = ""
                         , inputFilterData = ""
                         , kvViewType = KeyValueStore.KVVSummary
+
+                        -- Auth
+                        , authFlow = Auth.Common.Idle
+                        , authRedirectBaseUrl = dummyAuthUrl
                         }
                     , Cmd.none
                     )
@@ -199,6 +215,11 @@ updateLoaded msg model =
             ( model, Ports.playSound (Json.Encode.string "chirp.mp3") )
 
         -- USER
+        Auth_GoogleOauthSignInRequested ->
+            -- Note: 'OAuthGoogle' is a special String value that will be parsed by the elm-spa route /login/:provider/callback
+            Auth.Flow.signInRequested "OAuthGoogle" model Nothing
+                |> Tuple.mapSecond (Auth_ToBackend >> Lamdera.sendToBackend)
+
         SetSignInState state ->
             ( { model
                 | signInState = state
@@ -420,6 +441,13 @@ updateFromBackend msg model =
 updateFromBackendLoaded : ToFrontend -> LoadedModel -> ( LoadedModel, Cmd msg )
 updateFromBackendLoaded msg model =
     case msg of
+        -- TODO: Is it correct to assume a loaded model???
+        Auth_ActiveSession user ->
+            ( model, Cmd.none )
+
+        Auth_ToFrontend authToFrontendMsg ->
+            AuthImplementation.updateFromBackend authToFrontendMsg model
+
         InitData { prices, productInfo } ->
             ( { model | prices = prices, productInfoDict = productInfo }, Cmd.none )
 

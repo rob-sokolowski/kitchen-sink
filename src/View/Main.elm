@@ -10,6 +10,7 @@ import Pages.Brillig
 import Pages.DataStore
 import Pages.EditData
 import Pages.Features
+import Pages.GoogleOAuthRedirect
 import Pages.Home
 import Pages.Notes
 import Pages.Parts
@@ -81,6 +82,9 @@ loadedView model =
 
         SignInRoute ->
             Pages.Parts.generic model Pages.SignIn.view
+
+        GoogleOAuthRedirect ->
+            Pages.Parts.generic model Pages.GoogleOAuthRedirect.view
 
         Brillig ->
             Pages.Parts.generic model Pages.Brillig.view
