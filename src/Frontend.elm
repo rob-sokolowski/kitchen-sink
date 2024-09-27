@@ -396,6 +396,9 @@ updateLoaded msg model =
         DataUploaded result ->
             ( model, Cmd.none )
 
+        SignInWithGoogle ->
+            ( model, Cmd.none )
+
 
 scrollToTop : Cmd FrontendMsg
 scrollToTop =
@@ -487,3 +490,6 @@ updateFromBackendLoaded msg model =
         -- DATA
         GotKeyValueStore keyValueStore ->
             ( { model | keyValueStore = keyValueStore }, Cmd.none )
+
+        Auth_ToFrontend toFrontend ->
+            ( model, Cmd.none )

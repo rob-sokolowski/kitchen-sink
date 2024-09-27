@@ -1,6 +1,8 @@
 module Backend exposing (app, init, subscriptions, update, updateFromFrontend)
 
 import AssocList
+import Auth.Flow
+import AuthImplementation
 import BackendHelper
 import BiDict
 import Dict
@@ -19,7 +21,7 @@ import Task
 import Time
 import Types exposing (..)
 import Untrusted
-import User
+import User exposing (UserId)
 
 
 app =
@@ -34,7 +36,8 @@ app =
 init : ( BackendModel, Cmd BackendMsg )
 init =
     ( { userDictionary = BackendHelper.testUserDictionary
-      , sessions = BiDict.empty
+      , sessions = Dict.empty
+      , pendingAuths = Dict.empty
 
       --STRIPE
       , orders = AssocList.empty
@@ -225,9 +228,12 @@ update msg model =
 
         OnConnected sessionId clientId ->
             let
+                maybeUsername : Maybe UserId
                 maybeUsername =
-                    BiDict.get sessionId model.sessions
+                    -- TODO: implement!
+                    Just 123
 
+                --Dict.get sessionId model.sessions
                 maybeUser =
                     Maybe.andThen (\username -> Dict.get username model.userDictionary) maybeUsername
             in
@@ -343,7 +349,16 @@ update msg model =
 
         ErrorEmailSent _ ->
             ( model, Cmd.none )
+
+        Auth_BackendMsg authMsg ->
+            -- TODO:
+            ( model, Cmd.none )
+
+        --Auth.Flow.backendUpdate (AuthImplementation.backendConfig model) authMsg
+        Auth_RenewSession userId sessionId clientId posix ->
+            ( model, Cmd.none )
     )
+        -- TODO: What is this????
         |> (\( newModel, cmd ) ->
                 ( newModel, Cmd.batch [ cmd ] )
            )
@@ -394,50 +409,53 @@ updateFromFrontend sessionId clientId msg model =
 
         -- USER
         SignInRequest username password ->
-            let
-                maybeUser =
-                    Dict.get username model.userDictionary
+            ( model, Cmd.none )
 
-                addSession : String -> BackendModel -> BackendModel
-                addSession username_ model_ =
-                    { model_ | sessions = BiDict.insert sessionId username_ model_.sessions }
-            in
-            if Just password == Maybe.map .password maybeUser then
-                ( model |> addSession username
-                , Cmd.batch
-                    [ Lamdera.sendToFrontend clientId (GotMessage "Sign in successful!")
-                    , Lamdera.sendToFrontend clientId (UserSignedIn maybeUser)
-                    ]
-                )
-
-            else
-                ( model
-                , Cmd.batch
-                    [ Lamdera.sendToFrontend clientId (UserSignedIn Nothing)
-                    , Lamdera.sendToFrontend clientId (GotMessage "Username and password do not match. ")
-                    ]
-                )
-
+        -- TODO: Ask jim about email / password case
+        --let
+        --    maybeUser =
+        --        Dict.get username model.userDictionary
+        --
+        --    addSession : String -> BackendModel -> BackendModel
+        --    addSession username_ model_ =
+        --        { model_ | sessions = BiDict.insert sessionId username_ model_.sessions }
+        --in
+        --if Just password == Maybe.map .password maybeUser then
+        --    ( model |> addSession username
+        --    , Cmd.batch
+        --        [ Lamdera.sendToFrontend clientId (GotMessage "Sign in successful!")
+        --        , Lamdera.sendToFrontend clientId (UserSignedIn maybeUser)
+        --        ]
+        --    )
+        --
+        --else
+        --    ( model
+        --    , Cmd.batch
+        --        [ Lamdera.sendToFrontend clientId (UserSignedIn Nothing)
+        --        , Lamdera.sendToFrontend clientId (GotMessage "Username and password do not match. ")
+        --        ]
+        --    )
         SignOutRequest username ->
-            let
-                activeSessions : List SessionId
-                activeSessions =
-                    BiDict.getReverse username model.sessions
-                        |> Set.toList
+            ( model, Cmd.none )
 
-                removeSessions : List SessionId -> BackendModel -> BackendModel
-                removeSessions activeSessions_ model_ =
-                    List.foldl
-                        (\sessionId_ model__ ->
-                            { model__ | sessions = BiDict.remove sessionId_ model__.sessions }
-                        )
-                        model_
-                        activeSessions_
-            in
-            ( model |> removeSessions activeSessions
-            , Lamdera.sendToFrontend clientId (UserSignedIn Nothing)
-            )
-
+        --let
+        --    activeSessions : List SessionId
+        --    activeSessions =
+        --        BiDict.getReverse username model.sessions
+        --            |> Set.toList
+        --
+        --    removeSessions : List SessionId -> BackendModel -> BackendModel
+        --    removeSessions activeSessions_ model_ =
+        --        List.foldl
+        --            (\sessionId_ model__ ->
+        --                { model__ | sessions = BiDict.remove sessionId_ model__.sessions }
+        --            )
+        --            model_
+        --            activeSessions_
+        --in
+        --( model |> removeSessions activeSessions
+        --, Lamdera.sendToFrontend clientId (UserSignedIn Nothing)
+        --)
         SignUpRequest realname username email password ->
             case model.localUuidData of
                 Nothing ->
@@ -451,17 +469,20 @@ updateFromFrontend sessionId clientId msg model =
                             , username = username
                             , email = email
                             , password = password
-                            , created_at = model.time
-                            , updated_at = model.time
+                            , createdAt = model.time
+                            , updatedAt = model.time
                             , id = LocalUUID.extractUUIDAsString uuidData
                             , role = User.UserRole
                             }
                     in
                     ( { model
                         | localUuidData = model.localUuidData |> Maybe.map LocalUUID.step
-                        , userDictionary = Dict.insert username user model.userDictionary
+
+                        -- TODO: Different auth flows!
+                        --, userDictionary = Dict.insert username user model.userDictionary
                       }
-                    , Lamdera.sendToFrontend clientId (UserSignedIn (Just user))
+                    , Cmd.none
+                      --, Lamdera.sendToFrontend clientId (UserSignedIn (Just user))
                     )
 
         -- STRIPE
@@ -486,3 +507,6 @@ updateFromFrontend sessionId clientId msg model =
         -- EXAMPLES
         GetWeatherData city ->
             ( model, BackendHelper.getNewWeatherByCity clientId city )
+
+        Auth_ToBackend toBackend ->
+            ( model, Cmd.none )
